@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, AlertCircle, CheckCircle, Plus, Trash2, Edit, AlertOctagon, Wrench } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, CheckCircle, Plus, Trash2, Edit, AlertOctagon, Wrench, ChevronDown, PauseCircle } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { WorkOrderStatus, WorkOrderPriority, WorkOrder } from '../types';
 import Modal from '../components/Modal';
@@ -32,11 +32,24 @@ const WorkOrders: React.FC = () => {
 
   const getStatusIcon = (status: WorkOrderStatus) => {
     switch (status) {
-      case 'Completed': return <CheckCircle size={16} className="text-green-500" />;
-      case 'Pending': return <Clock size={16} className="text-slate-400" />;
-      case 'Requested': return <AlertOctagon size={16} className="text-purple-500" />;
-      case 'In Progress': return <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>;
+      case 'Completed': return <CheckCircle size={16} className="text-green-600" />;
+      case 'Pending': return <Clock size={16} className="text-slate-500" />;
+      case 'Requested': return <AlertOctagon size={16} className="text-purple-600" />;
+      case 'In Progress': return <div className="w-4 h-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></div>;
+      case 'On Hold': return <PauseCircle size={16} className="text-orange-500" />;
       default: return <AlertCircle size={16} className="text-slate-400" />;
+    }
+  };
+
+  // New helper for Dropdown styling
+  const getStatusStyles = (status: WorkOrderStatus) => {
+    switch (status) {
+      case 'Completed': return 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100';
+      case 'In Progress': return 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100';
+      case 'Requested': return 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100';
+      case 'Pending': return 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100';
+      case 'On Hold': return 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100';
+      default: return 'bg-white text-slate-700 border-slate-200';
     }
   };
 
@@ -70,11 +83,7 @@ const WorkOrders: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const cycleStatus = (wo: WorkOrder) => {
-    const statuses: WorkOrderStatus[] = ['Requested', 'Pending', 'In Progress', 'Completed'];
-    const nextIndex = (statuses.indexOf(wo.status) + 1) % statuses.length;
-    updateWorkOrder(wo.id, { status: statuses[nextIndex] });
-  };
+  // Removed cycleStatus function in favor of direct dropdown change
 
   return (
     <div className="space-y-6">
@@ -145,27 +154,32 @@ const WorkOrders: React.FC = () => {
                     <span>Due {wo.dueDate}</span>
                   </div>
                   
-                  <button 
-                    onClick={() => cycleStatus(wo)}
-                    className="flex items-center gap-2 min-w-[120px] px-2 py-1 rounded hover:bg-slate-100 transition-colors cursor-pointer group"
-                    title="Click to cycle status"
-                  >
-                    {getStatusIcon(wo.status)}
-                    <span className={`font-medium ${
-                      wo.status === 'Completed' ? 'text-green-600' :
-                      wo.status === 'In Progress' ? 'text-blue-600' :
-                      wo.status === 'Requested' ? 'text-purple-600' :
-                      'text-slate-600'
-                    }`}>
-                      {wo.status}
-                    </span>
-                  </button>
+                  {/* UX IMPROVEMENT: Explicit Status Dropdown */}
+                  <div className="relative min-w-[160px]">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+                      {getStatusIcon(wo.status)}
+                    </div>
+                    <select
+                      value={wo.status}
+                      onChange={(e) => updateWorkOrder(wo.id, { status: e.target.value as WorkOrderStatus })}
+                      className={`w-full appearance-none pl-10 pr-8 py-2 rounded-lg text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors ${getStatusStyles(wo.status)}`}
+                    >
+                      <option value="Requested">Requested</option>
+                      <option value="Pending">Pending</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="On Hold">On Hold</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500/70">
+                      <ChevronDown size={14} />
+                    </div>
+                  </div>
 
-                  <div className="flex gap-2">
-                    <button onClick={() => handleOpenModal(wo)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                  <div className="flex gap-2 border-l border-slate-200 pl-4">
+                    <button onClick={() => handleOpenModal(wo)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit Details">
                         <Edit size={18} />
                     </button>
-                    <button onClick={() => deleteWorkOrder(wo.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                    <button onClick={() => deleteWorkOrder(wo.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
                         <Trash2 size={18} />
                     </button>
                   </div>
