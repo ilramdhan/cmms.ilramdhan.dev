@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Search, Bell, User, CheckCircle2, AlertCircle, Info, Activity } from 'lucide-react';
+import { Menu, Search, Bell, User, CheckCircle2, AlertCircle, Info, Activity, AlertTriangle } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './views/Dashboard';
 import Assets from './views/Assets';
@@ -149,6 +149,7 @@ const AppContent: React.FC = () => {
                {notif.type === 'success' && <CheckCircle2 className="text-green-500" size={20} />}
                {notif.type === 'error' && <AlertCircle className="text-red-500" size={20} />}
                {notif.type === 'info' && <Info className="text-blue-500" size={20} />}
+               {notif.type === 'warning' && <AlertTriangle className="text-orange-500" size={20} />}
                <p className="text-sm font-medium text-slate-700">{notif.message}</p>
             </div>
           ))}

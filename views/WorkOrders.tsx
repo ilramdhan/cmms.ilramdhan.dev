@@ -12,10 +12,8 @@ const WorkOrders: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWO, setEditingWO] = useState<WorkOrder | null>(null);
   const [formData, setFormData] = useState<Partial<WorkOrder>>({
-    title: '', description: '', priority: 'Medium', status: 'Pending', assignedTo: '', assetId: '', dueDate: ''
+    title: '', description: '', priority: 'Medium', status: 'Pending', assignedTo: '', assetId: '', dueDate: '', partsUsed: ''
   });
-  // Simplified parts tracking for demo
-  const [partsCost, setPartsCost] = useState<string>(''); 
 
   const tabs = ['All', 'Requested', 'Pending', 'In Progress', 'Completed'];
 
@@ -46,13 +44,11 @@ const WorkOrders: React.FC = () => {
     if (wo) {
       setEditingWO(wo);
       setFormData(wo);
-      setPartsCost(''); // Reset tracking for demo simplicity
     } else {
       setEditingWO(null);
       setFormData({
-        title: '', description: '', priority: 'Medium', status: 'Pending', assignedTo: '', assetId: '', dueDate: new Date().toISOString().split('T')[0]
+        title: '', description: '', priority: 'Medium', status: 'Pending', assignedTo: '', assetId: '', dueDate: new Date().toISOString().split('T')[0], partsUsed: ''
       });
-      setPartsCost('');
     }
     setIsModalOpen(true);
   };
@@ -258,19 +254,20 @@ const WorkOrders: React.FC = () => {
             </div>
           </div>
 
-          {/* New Field: Parts Integration Demo */}
           <div className="pt-2 border-t border-slate-100">
-            <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Parts & Inventory Usage</h4>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Parts Used (Demo)</h4>
             <div className="flex gap-2">
                 <input 
                   type="text" 
-                  placeholder="Record parts used (e.g. 2x Bearings)"
+                  placeholder="e.g. V-Belt A45"
                   className="flex-1 px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:outline-none"
-                  value={partsCost}
-                  onChange={(e) => setPartsCost(e.target.value)}
+                  value={formData.partsUsed || ''}
+                  onChange={(e) => setFormData({...formData, partsUsed: e.target.value})}
                 />
             </div>
-            <p className="text-xs text-slate-400 mt-1">This will deduct from inventory upon completion.</p>
+            <p className="text-xs text-slate-400 mt-1">
+               Integration Demo: If you type "V-Belt" and complete this WO, stock will decrease by 1.
+            </p>
           </div>
 
           <div className="pt-4 flex justify-end gap-3">

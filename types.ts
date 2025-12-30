@@ -8,8 +8,8 @@ export interface Asset {
   name: string;
   category: string;
   model: string;
-  serialNumber: string; // New
-  installDate: string; // New
+  serialNumber: string;
+  installDate: string;
   location: string;
   status: AssetStatus;
   uptime: number; // Percentage
@@ -21,15 +21,16 @@ export interface Asset {
 export interface WorkOrder {
   id: string;
   title: string;
-  description?: string; // New for Request Portal
+  description?: string;
   assetId: string;
   assetName: string;
-  assignedTo: string; // Technician Name
+  assignedTo: string;
   priority: WorkOrderPriority;
   status: WorkOrderStatus;
   dueDate: string;
   createdAt: string;
-  type?: 'Reactive' | 'Preventive'; // New to track PMs
+  type?: 'Reactive' | 'Preventive';
+  partsUsed?: string; // Format: "PRT-001:2" (PartID:Qty) -> Simple text for demo integration
 }
 
 export interface PMSchedule {
@@ -85,5 +86,5 @@ export interface ActivityLog {
 export interface Notification {
   id: string;
   message: string;
-  type: 'success' | 'error' | 'info';
+  type: 'success' | 'error' | 'info' | 'warning';
 }

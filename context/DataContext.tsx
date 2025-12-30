@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Asset, WorkOrder, Part, Technician, Notification, ActivityLog, PMSchedule } from '../types';
 import { ASSETS, WORK_ORDERS, PARTS, TECHNICIANS, RECENT_ACTIVITY, PM_SCHEDULES } from '../constants';
 
@@ -37,24 +37,54 @@ interface DataContextType {
   deleteTechnician: (id: string) => void;
 
   // Notification Actions
-  addNotification: (message: string, type: 'success' | 'error' | 'info') => void;
+  addNotification: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
   removeNotification: (id: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [assets, setAssets] = useState<Asset[]>(ASSETS);
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(WORK_ORDERS);
-  const [parts, setParts] = useState<Part[]>(PARTS);
-  const [technicians, setTechnicians] = useState<Technician[]>(TECHNICIANS);
-  const [activities, setActivities] = useState<ActivityLog[]>(RECENT_ACTIVITY);
-  const [pmSchedules, setPmSchedules] = useState<PMSchedule[]>(PM_SCHEDULES);
+  // Helper to load from LocalStorage or fallback to constant
+  const loadState = <T,>(key: string, fallback: T): T => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : fallback;
+    } catch (e) {
+      console.error("Failed to load state", e);
+      return fallback;
+    }
+  };
+
+  const [assets, setAssets] = useState<Asset[]>(() => loadState('cmms_assets', ASSETS));
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => loadState('cmms_workOrders', WORK_ORDERS));
+  const [parts, setParts] = useState<Part[]>(() => loadState('cmms_parts', PARTS));
+  const [technicians, setTechnicians] = useState<Technician[]>(() => loadState('cmms_technicians', TECHNICIANS));
+  const [activities, setActivities] = useState<ActivityLog[]>(() => loadState('cmms_activities', RECENT_ACTIVITY));
+  const [pmSchedules, setPmSchedules] = useState<PMSchedule[]>(() => loadState('cmms_pmSchedules', PM_SCHEDULES));
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const addNotification = (message: string, type: 'success' | 'error' | 'info') => {
+  // Persist State Changes
+  useEffect(() => localStorage.setItem('cmms_assets', JSON.stringify(assets)), [assets]);
+  useEffect(() => localStorage.setItem('cmms_workOrders', JSON.stringify(workOrders)), [workOrders]);
+  useEffect(() => localStorage.setItem('cmms_parts', JSON.stringify(parts)), [parts]);
+  useEffect(() => localStorage.setItem('cmms_technicians', JSON.stringify(technicians)), [technicians]);
+  useEffect(() => localStorage.setItem('cmms_activities', JSON.stringify(activities)), [activities]);
+  useEffect(() => localStorage.setItem('cmms_pmSchedules', JSON.stringify(pmSchedules)), [pmSchedules]);
+
+  const addNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
     const id = Date.now().toString();
     setNotifications(prev => [...prev, { id, message, type }]);
+    
+    // Log activity
+    const newActivity: ActivityLog = {
+      id: Date.now().toString(),
+      action: message,
+      user: 'Admin', // Static for demo
+      timestamp: 'Just now',
+      type: type
+    };
+    setActivities(prev => [newActivity, ...prev]);
+
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 3000);
@@ -68,27 +98,43 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addAsset = (asset: Omit<Asset, 'id'>) => {
     const newAsset = { ...asset, id: `AST-${Math.floor(Math.random() * 1000)}` };
     setAssets([...assets, newAsset]);
-    addNotification('Asset created successfully', 'success');
+    addNotification(`Asset ${newAsset.name} created`, 'success');
   };
   const updateAsset = (id: string, updates: Partial<Asset>) => {
     setAssets(assets.map(a => a.id === id ? { ...a, ...updates } : a));
-    addNotification('Asset updated', 'info');
+    addNotification('Asset details updated', 'info');
   };
   const deleteAsset = (id: string) => {
     setAssets(assets.filter(a => a.id !== id));
-    addNotification('Asset deleted', 'error');
+    addNotification('Asset removed from database', 'error');
   };
 
   // --- Work Orders ---
   const addWorkOrder = (wo: Omit<WorkOrder, 'id'>) => {
     const newWO = { ...wo, id: `WO-${Math.floor(Math.random() * 10000)}` };
     setWorkOrders([newWO, ...workOrders]);
-    addNotification('Work Order created', 'success');
+    addNotification(`Work Order ${newWO.id} created`, 'success');
   };
+
   const updateWorkOrder = (id: string, updates: Partial<WorkOrder>) => {
+    // INTEGRATION LOGIC: Check if we are closing a WO and if it used parts
+    if (updates.status === 'Completed' && updates.partsUsed) {
+      // Parse "PRT-001:2" format for demo integration
+      // Logic: If user entered text like "PRT-001", we deduct 1. 
+      // This is a simple logic for the demo to show data connecting.
+      const partToDeduct = parts.find(p => updates.partsUsed?.includes(p.sku) || updates.partsUsed?.includes(p.name));
+      
+      if (partToDeduct) {
+         // Deduct 1 for demo simplicity if match found
+         updatePart(partToDeduct.id, { quantity: partToDeduct.quantity - 1 });
+         addNotification(`Inventory deducted: 1x ${partToDeduct.name}`, 'warning');
+      }
+    }
+
     setWorkOrders(workOrders.map(w => w.id === id ? { ...w, ...updates } : w));
-    addNotification('Work Order updated', 'info');
+    addNotification('Work Order status updated', 'info');
   };
+
   const deleteWorkOrder = (id: string) => {
     setWorkOrders(workOrders.filter(w => w.id !== id));
     addNotification('Work Order deleted', 'error');
@@ -98,7 +144,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addPMSchedule = (pm: Omit<PMSchedule, 'id'>) => {
     const newPM = { ...pm, id: `PM-${Math.floor(Math.random() * 1000)}` };
     setPmSchedules([...pmSchedules, newPM]);
-    addNotification('Preventive Maintenance Schedule created', 'success');
+    addNotification('PM Schedule created', 'success');
   };
 
   const generateWOFromPM = (pmId: string) => {
@@ -120,7 +166,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     addWorkOrder(newWO);
     
-    // Update Next Due Date
     const nextDue = new Date();
     nextDue.setDate(nextDue.getDate() + pm.frequencyDays);
     setPmSchedules(pmSchedules.map(p => p.id === pmId ? { 
@@ -129,14 +174,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       nextDueDate: nextDue.toISOString().split('T')[0] 
     } : p));
 
-    addNotification('Work Order generated from Schedule', 'success');
+    addNotification('WO generated from PM', 'success');
   };
 
   const deletePMSchedule = (id: string) => {
     setPmSchedules(pmSchedules.filter(p => p.id !== id));
     addNotification('Schedule deleted', 'error');
   };
-
 
   // --- Inventory ---
   const addPart = (part: Omit<Part, 'id'>) => {
@@ -146,7 +190,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   const updatePart = (id: string, updates: Partial<Part>) => {
     setParts(parts.map(p => p.id === id ? { ...p, ...updates } : p));
-    addNotification('Inventory updated', 'info');
+    // Silent update for logic, audible for manual
   };
   const deletePart = (id: string) => {
     setParts(parts.filter(p => p.id !== id));
