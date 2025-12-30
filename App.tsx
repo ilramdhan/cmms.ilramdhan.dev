@@ -38,7 +38,8 @@ const AppContent: React.FC = () => {
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard': return <Dashboard />;
+      // Pass the navigation function to Dashboard
+      case 'dashboard': return <Dashboard onNavigate={setCurrentView} />;
       case 'assets': return <Assets />;
       case 'work-orders': return <WorkOrders />;
       case 'inventory': return <Inventory />;

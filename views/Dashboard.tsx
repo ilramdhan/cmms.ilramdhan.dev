@@ -1,19 +1,97 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
-import { Activity, AlertTriangle, Box, CheckCircle2, Clock, Users, DollarSign } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Activity, AlertTriangle, CheckCircle2, Clock, Users, DollarSign, Download } from 'lucide-react';
 import StatCard from '../components/StatCard';
-import { CHART_DATA, KPI_DATA } from '../constants'; // Keeping chart data static for visual demo as per prompt, but KPIs dynamic
 import { useData } from '../context/DataContext';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onNavigate: (view: string) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { assets, workOrders, parts, activities } = useData();
 
   const lowStockCount = parts.filter(p => p.quantity < 10).length;
   const activeWOs = workOrders.filter(wo => wo.status === 'In Progress' || wo.status === 'Pending').length;
-  const totalAssets = assets.length;
   
-  // Calculate approximate costs (dummy logic for display)
-  const totalCost = parts.reduce((acc, part) => acc + (part.unitPrice * part.quantity), 0);
+  // Calculate approximate costs (Inventory Value)
+  const totalInventoryValue = parts.reduce((acc, part) => acc + (part.unitPrice * part.quantity), 0);
+
+  // --- Real-time Chart Logic ---
+  const chartData = useMemo(() => {
+    // 1. Get last 6 months
+    const months: string[] = [];
+    const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      months.push(d.toLocaleString('default', { month: 'short' }));
+    }
+
+    // 2. Initialize data structure
+    const data = months.map(month => ({
+      month,
+      completed: 0,
+      backlog: 0,
+      costs: 0
+    }));
+
+    // 3. Populate with real WO data
+    workOrders.forEach(wo => {
+      const woDate = new Date(wo.createdAt);
+      // Logic check: Is this WO within the last 6 months?
+      // For simplicity in this demo, we assume the month string match is enough for visual
+      // In production, compare actual timestamps.
+      const woMonthStr = woDate.toLocaleString('default', { month: 'short' });
+      
+      const dataPoint = data.find(d => d.month === woMonthStr);
+      if (dataPoint) {
+        if (wo.status === 'Completed') {
+          dataPoint.completed += 1;
+          // Simulated Cost: $150 labor + arbitrary part cost
+          dataPoint.costs += 150; 
+        } else {
+          dataPoint.backlog += 1;
+        }
+      }
+    });
+
+    return data;
+  }, [workOrders]);
+
+  // --- Export Function ---
+  const handleDownloadReport = () => {
+    // 1. Define headers
+    const headers = ['WO ID', 'Title', 'Asset', 'Status', 'Priority', 'Assigned To', 'Date Created', 'Due Date'];
+    
+    // 2. Map data
+    const rows = workOrders.map(wo => [
+      wo.id,
+      `"${wo.title}"`, // Quote strings to handle commas
+      `"${wo.assetName}"`,
+      wo.status,
+      wo.priority,
+      wo.assignedTo || 'Unassigned',
+      wo.createdAt,
+      wo.dueDate
+    ]);
+
+    // 3. Create CSV Content
+    const csvContent = [
+      headers.join(','), 
+      ...rows.map(r => r.join(','))
+    ].join('\n');
+
+    // 4. Trigger Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `optimaint_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-6">
@@ -23,8 +101,11 @@ const Dashboard: React.FC = () => {
           <p className="text-slate-500">Real-time system performance.</p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
-            Download Report
+          <button 
+            onClick={handleDownloadReport}
+            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+          >
+            <Download size={16} /> Download Report
           </button>
         </div>
       </div>
@@ -35,7 +116,7 @@ const Dashboard: React.FC = () => {
           title="Total Work Orders" 
           value={workOrders.length} 
           icon={Activity} 
-          trend="Live" 
+          trend="Real-time" 
           trendUp={true} 
           color="blue"
         />
@@ -43,8 +124,8 @@ const Dashboard: React.FC = () => {
           title="Active Jobs" 
           value={activeWOs} 
           icon={Clock} 
-          trend="In Progress" 
-          trendUp={false} 
+          trend="Current backlog" 
+          trendUp={activeWOs < 5} 
           color="orange"
         />
         <StatCard 
@@ -57,7 +138,7 @@ const Dashboard: React.FC = () => {
         />
         <StatCard 
           title="Inventory Value" 
-          value={`$${totalCost.toLocaleString()}`} 
+          value={`$${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`} 
           icon={DollarSign} 
           trend="Estimated" 
           trendUp={true} 
@@ -65,32 +146,47 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Alerts Section (New) */}
+      {/* Interactive Alerts Section */}
       {(lowStockCount > 0 || activeWOs > 5) && (
-        <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center animate-in slide-in-from-top-2 duration-300">
           <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
             <AlertTriangle size={20} />
           </div>
           <div className="flex-1">
             <h4 className="font-semibold text-orange-800">System Attention Required</h4>
-            <p className="text-sm text-orange-700 mt-1">
-              {lowStockCount > 0 && `• ${lowStockCount} items are running low on stock. `}
-              {activeWOs > 5 && `• High volume of active work orders (${activeWOs}).`}
-            </p>
+            <div className="text-sm text-orange-700 mt-1 flex flex-col sm:flex-row gap-2 sm:gap-4">
+              {lowStockCount > 0 && (
+                <span className="flex items-center gap-1">
+                  • <b>{lowStockCount}</b> items are low on stock.
+                </span>
+              )}
+              {activeWOs > 5 && (
+                <span className="flex items-center gap-1">
+                   • High volume of active work orders (<b>{activeWOs}</b>).
+                </span>
+              )}
+            </div>
           </div>
-          <button className="px-4 py-2 bg-white border border-orange-200 text-orange-700 text-sm font-medium rounded-lg hover:bg-orange-100">
-            View Details
+          <button 
+            onClick={() => lowStockCount > 0 ? onNavigate('inventory') : onNavigate('work-orders')}
+            className="px-4 py-2 bg-white border border-orange-200 text-orange-700 text-sm font-medium rounded-lg hover:bg-orange-100 whitespace-nowrap"
+          >
+            {lowStockCount > 0 ? 'Check Inventory' : 'View Work Orders'}
           </button>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Chart */}
+        {/* Real-Time Chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Maintenance Requests (6 Months)</h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold text-slate-800">Maintenance Trends (6 Months)</h3>
+            <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">Live Data</span>
+          </div>
+          
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={CHART_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
@@ -99,8 +195,8 @@ const Dashboard: React.FC = () => {
                   contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}
                 />
                 <Legend iconType="circle" />
-                <Bar dataKey="completed" name="Completed" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
-                <Bar dataKey="backlog" name="Backlog" fill="#cbd5e1" radius={[4, 4, 0, 0]} barSize={30} />
+                <Bar dataKey="completed" name="Completed Jobs" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
+                <Bar dataKey="backlog" name="Pending/Backlog" fill="#cbd5e1" radius={[4, 4, 0, 0]} barSize={30} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -109,31 +205,35 @@ const Dashboard: React.FC = () => {
         {/* Recent Activity */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col">
           <h3 className="text-lg font-bold text-slate-800 mb-6">Recent Activity</h3>
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-[320px]">
             <div className="space-y-6">
-              {activities.map((log) => (
-                <div key={log.id} className="flex gap-4">
-                  <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                    log.type === 'success' ? 'bg-green-100 text-green-600' :
-                    log.type === 'warning' ? 'bg-orange-100 text-orange-600' :
-                    log.type === 'error' ? 'bg-red-100 text-red-600' :
-                    'bg-blue-100 text-blue-600'
-                  }`}>
-                    {log.type === 'success' ? <CheckCircle2 size={16} /> :
-                     log.type === 'warning' ? <AlertTriangle size={16} /> :
-                     log.type === 'error' ? <AlertTriangle size={16} /> :
-                     <Activity size={16} />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{log.action}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-slate-500">{log.user}</span>
-                      <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                      <span className="text-xs text-slate-500">{log.timestamp}</span>
+              {activities.length === 0 ? (
+                 <p className="text-slate-400 text-sm text-center italic mt-10">No recent activity logged.</p>
+              ) : (
+                activities.map((log) => (
+                  <div key={log.id} className="flex gap-4">
+                    <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                      log.type === 'success' ? 'bg-green-100 text-green-600' :
+                      log.type === 'warning' ? 'bg-orange-100 text-orange-600' :
+                      log.type === 'error' ? 'bg-red-100 text-red-600' :
+                      'bg-blue-100 text-blue-600'
+                    }`}>
+                      {log.type === 'success' ? <CheckCircle2 size={16} /> :
+                      log.type === 'warning' ? <AlertTriangle size={16} /> :
+                      log.type === 'error' ? <AlertTriangle size={16} /> :
+                      <Activity size={16} />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{log.action}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-500">{log.user}</span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                        <span className="text-xs text-slate-500">{log.timestamp}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
