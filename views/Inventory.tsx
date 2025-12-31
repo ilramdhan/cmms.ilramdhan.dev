@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Minus, Trash2, AlertCircle, Package } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, AlertCircle, Package, Image as ImageIcon } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { Part } from '../types';
 import Modal from '../components/Modal';
@@ -10,8 +10,9 @@ const Inventory: React.FC = () => {
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Part>>({
-    name: '', sku: '', category: '', quantity: 0, unitPrice: 0
+    name: '', sku: '', category: '', quantity: 0, unitPrice: 0, image: ''
   });
 
   const filteredParts = parts.filter(part => 
@@ -19,14 +20,24 @@ const Inventory: React.FC = () => {
     part.sku.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleOpenModal = () => {
-    setFormData({ name: '', sku: '', category: '', quantity: 0, unitPrice: 0 });
+  const handleOpenModal = (part?: Part) => {
+    if (part) {
+        setEditingId(part.id);
+        setFormData(part);
+    } else {
+        setEditingId(null);
+        setFormData({ name: '', sku: '', category: '', quantity: 0, unitPrice: 0, image: '' });
+    }
     setIsModalOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addPart(formData as Part);
+    if (editingId) {
+        updatePart(editingId, formData);
+    } else {
+        addPart(formData as Part);
+    }
     setIsModalOpen(false);
   };
 
@@ -44,7 +55,7 @@ const Inventory: React.FC = () => {
           <p className="text-slate-500">Track spare parts and stock levels.</p>
         </div>
         <button 
-          onClick={handleOpenModal}
+          onClick={() => handleOpenModal()}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
         >
           <Plus size={18} />
@@ -80,11 +91,15 @@ const Inventory: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredParts.map((part) => (
-                <tr key={part.id} className={`hover:bg-slate-50 transition-colors ${part.quantity < 10 ? 'bg-red-50/30' : ''}`}>
+                <tr key={part.id} className={`hover:bg-slate-50 transition-colors cursor-pointer ${part.quantity < 10 ? 'bg-red-50/30' : ''}`} onClick={() => handleOpenModal(part)}>
                   <td className="px-6 py-4 font-medium text-slate-900">
                     <div className="flex items-center gap-3">
-                       <div className={`p-2 rounded-lg ${part.quantity < 10 ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                          <Package size={18} />
+                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden border border-slate-200 bg-white ${!part.image && (part.quantity < 10 ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600')}`}>
+                          {part.image ? (
+                              <img src={part.image} alt={part.name} className="w-full h-full object-cover" />
+                          ) : (
+                              <Package size={18} />
+                          )}
                        </div>
                        <div>
                          <div className="flex items-center gap-2">
@@ -102,7 +117,7 @@ const Inventory: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-600 font-medium">${part.unitPrice.toFixed(2)}</td>
                   <td className="px-6 py-4">
-                     <div className="flex items-center gap-3">
+                     <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                         <button 
                           onClick={() => adjustStock(part.id, part.quantity, -1)}
                           className="w-7 h-7 rounded flex items-center justify-center border border-slate-300 hover:bg-slate-100 text-slate-600 bg-white"
@@ -121,7 +136,10 @@ const Inventory: React.FC = () => {
                      </div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={() => deletePart(part.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); deletePart(part.id); }} 
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 size={18} />
                     </button>
                   </td>
@@ -135,7 +153,7 @@ const Inventory: React.FC = () => {
        <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title="Add Spare Part"
+        title={editingId ? 'Edit Spare Part' : 'Add Spare Part'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -173,6 +191,21 @@ const Inventory: React.FC = () => {
                 />
             </div>
           </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Image URL (Optional)</label>
+            <div className="relative">
+                <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input 
+                    type="text" 
+                    className="w-full pl-10 pr-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="https://..."
+                    value={formData.image || ''}
+                    onChange={(e) => setFormData({...formData, image: e.target.value})}
+                />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Initial Qty</label>
@@ -198,7 +231,7 @@ const Inventory: React.FC = () => {
           </div>
           <div className="pt-4 flex justify-end gap-3">
              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">Cancel</button>
-             <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Part</button>
+             <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editingId ? 'Save Changes' : 'Add Part'}</button>
           </div>
         </form>
       </Modal>

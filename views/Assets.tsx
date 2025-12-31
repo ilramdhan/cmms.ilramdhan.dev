@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, MoreVertical, Plus, MapPin, Trash2, Edit, Eye, History, FileText, CheckCircle, PenTool } from 'lucide-react';
+import { Search, Filter, MoreVertical, Plus, MapPin, Trash2, Edit, Eye, History, FileText, CheckCircle, PenTool, Image as ImageIcon } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { AssetStatus, Asset } from '../types';
 import Modal from '../components/Modal';
@@ -49,7 +49,7 @@ const Assets: React.FC = () => {
     setFormData({
       name: '', category: 'General', model: '', serialNumber: '', location: '', status: 'Offline', uptime: 100,
       installDate: new Date().toISOString().split('T')[0],
-      image: `https://picsum.photos/200/200?random=${Math.floor(Math.random() * 100)}`
+      image: `https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=300&h=300` // Default Tech Image
     });
     setIsModalOpen(true);
   };
@@ -131,7 +131,16 @@ const Assets: React.FC = () => {
                 <tr key={asset.id} className="hover:bg-slate-50 transition-colors group cursor-pointer" onClick={() => handleOpenView(asset)}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <img src={asset.image} alt={asset.name} className="w-10 h-10 rounded-lg object-cover bg-slate-200" />
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-200">
+                         <img 
+                           src={asset.image} 
+                           alt={asset.name} 
+                           className="w-full h-full object-cover" 
+                           onError={(e) => {
+                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=100&h=100'; // Fallback
+                           }}
+                         />
+                      </div>
                       <div>
                         <p className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">{asset.name}</p>
                         <p className="text-xs text-slate-500">{asset.model}</p>
@@ -199,7 +208,14 @@ const Assets: React.FC = () => {
                {activeTab === 'details' ? (
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                       <img src={selectedAsset.image} alt={selectedAsset.name} className="w-full h-48 object-cover rounded-lg bg-slate-100" />
+                       <img 
+                        src={selectedAsset.image} 
+                        alt={selectedAsset.name} 
+                        className="w-full h-48 object-cover rounded-lg bg-slate-100" 
+                        onError={(e) => {
+                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=300&h=300';
+                         }}
+                       />
                        <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
                           <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
                             <PenTool size={16} /> Maintenance Stats
@@ -297,6 +313,18 @@ const Assets: React.FC = () => {
         ) : (
           /* Create / Edit Form */
           <form onSubmit={handleSubmit} className="space-y-4">
+             {/* Image Preview in Edit Mode */}
+             {(formData.image) && (
+                 <div className="flex justify-center mb-4">
+                     <img 
+                        src={formData.image} 
+                        alt="Preview" 
+                        className="w-32 h-32 object-cover rounded-lg border border-slate-200 shadow-sm" 
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=150&h=150'; }}
+                     />
+                 </div>
+             )}
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Asset Name</label>
               <input 
@@ -307,6 +335,22 @@ const Assets: React.FC = () => {
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Image URL</label>
+              <div className="relative">
+                <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input 
+                    type="text" 
+                    className="w-full pl-10 pr-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="https://..."
+                    value={formData.image || ''}
+                    onChange={(e) => setFormData({...formData, image: e.target.value})}
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Leave empty for default placeholder.</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Model</label>

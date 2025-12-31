@@ -23,7 +23,7 @@ export const ASSETS: Asset[] = [
     uptime: 98.5,
     lastMaintenance: '2023-10-15',
     nextMaintenance: '2023-11-15',
-    image: 'https://images.unsplash.com/photo-1565439399693-0171542031a6?auto=format&fit=crop&q=80&w=300&h=300',
+    image: 'https://images.unsplash.com/photo-1635338692797-27b0b0051787?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-002',
@@ -37,7 +37,7 @@ export const ASSETS: Asset[] = [
     uptime: 45.2,
     lastMaintenance: '2023-09-20',
     nextMaintenance: '2023-10-20',
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=300&h=300',
+    image: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-003',
@@ -51,7 +51,7 @@ export const ASSETS: Asset[] = [
     uptime: 88.0,
     lastMaintenance: '2023-10-25',
     nextMaintenance: '2023-11-25',
-    image: 'https://images.unsplash.com/photo-1595429392270-244e8c7553b6?auto=format&fit=crop&q=80&w=300&h=300',
+    image: 'https://images.unsplash.com/photo-1565514020176-db711eb900b1?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-004',
@@ -65,7 +65,7 @@ export const ASSETS: Asset[] = [
     uptime: 99.9,
     lastMaintenance: '2023-10-01',
     nextMaintenance: '2024-01-01',
-    image: 'https://images.unsplash.com/photo-1535378433864-ed9c2c51080c?auto=format&fit=crop&q=80&w=300&h=300',
+    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-005',
@@ -79,7 +79,7 @@ export const ASSETS: Asset[] = [
     uptime: 92.4,
     lastMaintenance: '2023-10-10',
     nextMaintenance: '2023-12-10',
-    image: 'https://images.unsplash.com/photo-1622676060133-c5a4d9434863?auto=format&fit=crop&q=80&w=300&h=300',
+    image: 'https://images.unsplash.com/photo-1590502160462-237199464052?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-006',
@@ -93,15 +93,43 @@ export const ASSETS: Asset[] = [
     uptime: 95.0,
     lastMaintenance: '2023-08-15',
     nextMaintenance: '2024-02-15',
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=300&h=300',
+    image: 'https://images.unsplash.com/photo-1580983556856-14e39893d395?auto=format&fit=crop&q=80&w=300&h=300',
   }
 ];
 
 export const TECHNICIANS: Technician[] = [
-  { id: 'Mike Ross', name: 'Mike Ross', role: 'Senior Mechanic', status: 'Active', email: 'mike.ross@optimaint.com' },
-  { id: 'Sarah Connor', name: 'Sarah Connor', role: 'Electrical Specialist', status: 'Active', email: 'sarah.connor@optimaint.com' },
-  { id: 'John Doe', name: 'John Doe', role: 'General Maintenance', status: 'Active', email: 'john.doe@optimaint.com' },
-  { id: 'Jane Smith', name: 'Jane Smith', role: 'Apprentice', status: 'Inactive', email: 'jane.smith@optimaint.com' },
+  { 
+    id: 'Mike Ross', 
+    name: 'Mike Ross', 
+    role: 'Senior Mechanic', 
+    status: 'Active', 
+    email: 'mike.ross@optimaint.com',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150&h=150' 
+  },
+  { 
+    id: 'Sarah Connor', 
+    name: 'Sarah Connor', 
+    role: 'Electrical Specialist', 
+    status: 'Active', 
+    email: 'sarah.connor@optimaint.com',
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150'
+  },
+  { 
+    id: 'John Doe', 
+    name: 'John Doe', 
+    role: 'General Maintenance', 
+    status: 'Active', 
+    email: 'john.doe@optimaint.com',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150'
+  },
+  { 
+    id: 'Jane Smith', 
+    name: 'Jane Smith', 
+    role: 'Apprentice', 
+    status: 'Inactive', 
+    email: 'jane.smith@optimaint.com',
+    // No image for testing fallback
+  },
 ];
 
 export const WORK_ORDERS: WorkOrder[] = [
@@ -231,10 +259,10 @@ export const RECENT_ACTIVITY: ActivityLog[] = [
 ];
 
 export const PARTS: Part[] = [
-  { id: 'PRT-001', name: 'Hydraulic Oil (5L)', sku: 'OIL-HYD-05', quantity: 8, unitPrice: 45.00, category: 'Fluids' }, // Low stock demo
-  { id: 'PRT-002', name: 'Ball Bearing 50mm', sku: 'BRG-50-MM', quantity: 24, unitPrice: 12.50, category: 'Hardware' },
+  { id: 'PRT-001', name: 'Hydraulic Oil (5L)', sku: 'OIL-HYD-05', quantity: 8, unitPrice: 45.00, category: 'Fluids', image: 'https://images.unsplash.com/photo-1627932644673-c6c747796d84?auto=format&fit=crop&q=80&w=150&h=150' },
+  { id: 'PRT-002', name: 'Ball Bearing 50mm', sku: 'BRG-50-MM', quantity: 24, unitPrice: 12.50, category: 'Hardware', image: 'https://images.unsplash.com/photo-1596464716127-f9a085929533?auto=format&fit=crop&q=80&w=150&h=150' },
   { id: 'PRT-003', name: 'V-Belt A45', sku: 'VBLT-A45', quantity: 15, unitPrice: 8.99, category: 'Belts' },
-  { id: 'PRT-004', name: 'Fuse 10A', sku: 'FUSE-10A', quantity: 4, unitPrice: 1.50, category: 'Electrical' }, // Critical Low
+  { id: 'PRT-004', name: 'Fuse 10A', sku: 'FUSE-10A', quantity: 4, unitPrice: 1.50, category: 'Electrical', image: 'https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?auto=format&fit=crop&q=80&w=150&h=150' },
   { id: 'PRT-005', name: 'Safety Sensor', sku: 'SENS-SAF-01', quantity: 12, unitPrice: 120.00, category: 'Sensors' },
   { id: 'PRT-006', name: 'M8 Bolts (Box)', sku: 'BLT-M8-100', quantity: 50, unitPrice: 5.00, category: 'Hardware' },
 ];

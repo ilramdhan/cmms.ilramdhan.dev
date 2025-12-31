@@ -51,6 +51,7 @@ export interface Part {
   quantity: number;
   unitPrice: number;
   category: string;
+  image?: string;
 }
 
 export interface Technician {
@@ -59,6 +60,7 @@ export interface Technician {
   role: string;
   status: 'Active' | 'Inactive';
   email: string;
+  image?: string;
 }
 
 export interface KpiData {
