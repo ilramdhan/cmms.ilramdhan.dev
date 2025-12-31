@@ -75,12 +75,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const id = Date.now().toString();
     setNotifications(prev => [...prev, { id, message, type }]);
     
-    // Log activity
+    // Log activity with REAL timestamp (ISO format)
+    // We use ISO string so we can parse it later in Dashboard to show relative time
     const newActivity: ActivityLog = {
       id: Date.now().toString(),
       action: message,
-      user: 'Admin', // Static for demo
-      timestamp: 'Just now',
+      user: 'Admin', // Static for demo, could be dynamic in full auth app
+      timestamp: new Date().toISOString(), 
       type: type
     };
     setActivities(prev => [newActivity, ...prev]);
@@ -98,11 +99,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addAsset = (asset: Omit<Asset, 'id'>) => {
     const newAsset = { ...asset, id: `AST-${Math.floor(Math.random() * 1000)}` };
     setAssets([...assets, newAsset]);
-    addNotification(`Asset ${newAsset.name} created`, 'success');
+    addNotification(`Asset Created: ${newAsset.name}`, 'success');
   };
   const updateAsset = (id: string, updates: Partial<Asset>) => {
+    const asset = assets.find(a => a.id === id);
     setAssets(assets.map(a => a.id === id ? { ...a, ...updates } : a));
-    addNotification('Asset details updated', 'info');
+    
+    // Specific log if status changes
+    if (updates.status && asset) {
+       addNotification(`Asset ${asset.name} status: ${updates.status}`, updates.status === 'Running' ? 'success' : 'warning');
+    } else {
+       addNotification(`Asset details updated: ${asset?.name}`, 'info');
+    }
   };
   const deleteAsset = (id: string) => {
     setAssets(assets.filter(a => a.id !== id));
@@ -113,38 +121,62 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addWorkOrder = (wo: Omit<WorkOrder, 'id'>) => {
     const newWO = { ...wo, id: `WO-${Math.floor(Math.random() * 10000)}` };
     setWorkOrders([newWO, ...workOrders]);
-    addNotification(`Work Order ${newWO.id} created`, 'success');
+    addNotification(`Work Order Created: ${newWO.title}`, 'success');
   };
 
   const updateWorkOrder = (id: string, updates: Partial<WorkOrder>) => {
-    // INTEGRATION LOGIC: Check if we are closing a WO and if it used parts
-    if (updates.status === 'Completed' && updates.partsUsed) {
-      // Parse "PRT-001:2" format for demo integration
-      // Logic: If user entered text like "PRT-001", we deduct 1. 
-      // This is a simple logic for the demo to show data connecting.
-      const partToDeduct = parts.find(p => updates.partsUsed?.includes(p.sku) || updates.partsUsed?.includes(p.name));
+    const existingWO = workOrders.find(w => w.id === id);
+    if (!existingWO) return;
+
+    // INTEGRATION LOGIC: Deduct Inventory when completed
+    if (updates.status === 'Completed' && existingWO.status !== 'Completed') {
+      const partsString = updates.partsUsed || existingWO.partsUsed;
       
-      if (partToDeduct) {
-         // Deduct 1 for demo simplicity if match found
-         updatePart(partToDeduct.id, { quantity: partToDeduct.quantity - 1 });
-         addNotification(`Inventory deducted: 1x ${partToDeduct.name}`, 'warning');
+      if (partsString) {
+        // partsString format expected from WorkOrders.tsx: "Item Name x2, Other Item x1"
+        const items = partsString.split(', ');
+        const updatedParts = [...parts];
+        let deductionOccurred = false;
+
+        items.forEach(item => {
+           // Try to match "Name xNumber"
+           const match = item.match(/(.+) x(\d+)/);
+           if (match) {
+             const name = match[1].trim();
+             const qty = parseInt(match[2]);
+             
+             const partIndex = updatedParts.findIndex(p => p.name === name);
+             if (partIndex >= 0) {
+               const p = updatedParts[partIndex];
+               updatedParts[partIndex] = { ...p, quantity: Math.max(0, p.quantity - qty) };
+               deductionOccurred = true;
+               // We don't notify here to avoid spamming toast, relying on the main WO update toast
+             }
+           }
+        });
+
+        if (deductionOccurred) {
+          setParts(updatedParts);
+        }
       }
     }
 
     setWorkOrders(workOrders.map(w => w.id === id ? { ...w, ...updates } : w));
-    addNotification('Work Order status updated', 'info');
+    if (updates.status && updates.status !== existingWO.status) {
+       addNotification(`WO #${id} updated to ${updates.status}`, 'info');
+    }
   };
 
   const deleteWorkOrder = (id: string) => {
     setWorkOrders(workOrders.filter(w => w.id !== id));
-    addNotification('Work Order deleted', 'error');
+    addNotification(`Work Order #${id} deleted`, 'error');
   };
 
   // --- PM Schedules ---
   const addPMSchedule = (pm: Omit<PMSchedule, 'id'>) => {
     const newPM = { ...pm, id: `PM-${Math.floor(Math.random() * 1000)}` };
     setPmSchedules([...pmSchedules, newPM]);
-    addNotification('PM Schedule created', 'success');
+    addNotification(`New PM Schedule: ${newPM.taskName}`, 'success');
   };
 
   const generateWOFromPM = (pmId: string) => {
@@ -174,38 +206,47 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       nextDueDate: nextDue.toISOString().split('T')[0] 
     } : p));
 
-    addNotification('WO generated from PM', 'success');
+    addNotification(`Triggered PM: ${pm.taskName}`, 'success');
   };
 
   const deletePMSchedule = (id: string) => {
     setPmSchedules(pmSchedules.filter(p => p.id !== id));
-    addNotification('Schedule deleted', 'error');
+    addNotification('PM Schedule deleted', 'error');
   };
 
   // --- Inventory ---
   const addPart = (part: Omit<Part, 'id'>) => {
     const newPart = { ...part, id: `PRT-${Math.floor(Math.random() * 1000)}` };
     setParts([...parts, newPart]);
-    addNotification('Part added to inventory', 'success');
+    addNotification(`New Part Added: ${newPart.name}`, 'success');
   };
+  
   const updatePart = (id: string, updates: Partial<Part>) => {
+    const part = parts.find(p => p.id === id);
     setParts(parts.map(p => p.id === id ? { ...p, ...updates } : p));
-    // Silent update for logic, audible for manual
+    
+    // Specific logging for Quantity changes (Inventory Adjustments)
+    if (part && updates.quantity !== undefined && updates.quantity !== part.quantity) {
+       const diff = updates.quantity - part.quantity;
+       const action = diff > 0 ? 'Stock Replenished' : 'Stock Used';
+       addNotification(`${action}: ${part.name} (${diff > 0 ? '+' : ''}${diff})`, 'info');
+    }
   };
+  
   const deletePart = (id: string) => {
     setParts(parts.filter(p => p.id !== id));
-    addNotification('Part removed', 'error');
+    addNotification('Part removed from inventory', 'error');
   };
 
   // --- Technicians ---
   const addTechnician = (tech: Omit<Technician, 'id'>) => {
     const newTech = { ...tech, id: `T-${Math.floor(Math.random() * 1000)}` };
     setTechnicians([...technicians, newTech]);
-    addNotification('Technician registered', 'success');
+    addNotification(`Technician Registered: ${newTech.name}`, 'success');
   };
   const updateTechnician = (id: string, updates: Partial<Technician>) => {
     setTechnicians(technicians.map(t => t.id === id ? { ...t, ...updates } : t));
-    addNotification('Technician updated', 'info');
+    addNotification('Technician details updated', 'info');
   };
   const deleteTechnician = (id: string) => {
     setTechnicians(technicians.filter(t => t.id !== id));

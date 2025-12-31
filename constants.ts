@@ -1,20 +1,14 @@
 import { Asset, WorkOrder, KpiData, ChartDataPoint, ActivityLog, Part, Technician, PMSchedule } from './types';
 
+// Calculated internally in Dashboard, but keeping type for reference
 export const KPI_DATA: KpiData = {
-  totalAssets: 142,
-  activeWorkOrders: 18,
-  lowStockItems: 5,
-  mtbf: 320,
+  totalAssets: 0,
+  activeWorkOrders: 0,
+  lowStockItems: 0,
+  mtbf: 0,
 };
 
-export const CHART_DATA: ChartDataPoint[] = [
-  { month: 'Jan', completed: 45, backlog: 12, costs: 4200 },
-  { month: 'Feb', completed: 52, backlog: 8, costs: 3800 },
-  { month: 'Mar', completed: 48, backlog: 15, costs: 5100 },
-  { month: 'Apr', completed: 61, backlog: 5, costs: 4500 },
-  { month: 'May', completed: 55, backlog: 10, costs: 4800 },
-  { month: 'Jun', completed: 67, backlog: 4, costs: 4100 },
-];
+export const CHART_DATA: ChartDataPoint[] = []; // Calculated dynamically
 
 export const ASSETS: Asset[] = [
   {
@@ -29,7 +23,7 @@ export const ASSETS: Asset[] = [
     uptime: 98.5,
     lastMaintenance: '2023-10-15',
     nextMaintenance: '2023-11-15',
-    image: 'https://picsum.photos/200/200?random=1',
+    image: 'https://images.unsplash.com/photo-1565439399693-0171542031a6?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-002',
@@ -43,7 +37,7 @@ export const ASSETS: Asset[] = [
     uptime: 45.2,
     lastMaintenance: '2023-09-20',
     nextMaintenance: '2023-10-20',
-    image: 'https://picsum.photos/200/200?random=2',
+    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-003',
@@ -57,7 +51,7 @@ export const ASSETS: Asset[] = [
     uptime: 88.0,
     lastMaintenance: '2023-10-25',
     nextMaintenance: '2023-11-25',
-    image: 'https://picsum.photos/200/200?random=3',
+    image: 'https://images.unsplash.com/photo-1595429392270-244e8c7553b6?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-004',
@@ -71,7 +65,7 @@ export const ASSETS: Asset[] = [
     uptime: 99.9,
     lastMaintenance: '2023-10-01',
     nextMaintenance: '2024-01-01',
-    image: 'https://picsum.photos/200/200?random=4',
+    image: 'https://images.unsplash.com/photo-1535378433864-ed9c2c51080c?auto=format&fit=crop&q=80&w=300&h=300',
   },
   {
     id: 'AST-005',
@@ -85,8 +79,29 @@ export const ASSETS: Asset[] = [
     uptime: 92.4,
     lastMaintenance: '2023-10-10',
     nextMaintenance: '2023-12-10',
-    image: 'https://picsum.photos/200/200?random=5',
+    image: 'https://images.unsplash.com/photo-1622676060133-c5a4d9434863?auto=format&fit=crop&q=80&w=300&h=300',
   },
+  {
+    id: 'AST-006',
+    name: 'Packaging Unit Z1',
+    category: 'Logistics',
+    model: 'PackMaster 3000',
+    serialNumber: 'PM-3000-Z1',
+    installDate: '2021-06-01',
+    location: 'Floor 2, Zone D',
+    status: 'Offline',
+    uptime: 95.0,
+    lastMaintenance: '2023-08-15',
+    nextMaintenance: '2024-02-15',
+    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=300&h=300',
+  }
+];
+
+export const TECHNICIANS: Technician[] = [
+  { id: 'Mike Ross', name: 'Mike Ross', role: 'Senior Mechanic', status: 'Active', email: 'mike.ross@optimaint.com' },
+  { id: 'Sarah Connor', name: 'Sarah Connor', role: 'Electrical Specialist', status: 'Active', email: 'sarah.connor@optimaint.com' },
+  { id: 'John Doe', name: 'John Doe', role: 'General Maintenance', status: 'Active', email: 'john.doe@optimaint.com' },
+  { id: 'Jane Smith', name: 'Jane Smith', role: 'Apprentice', status: 'Inactive', email: 'jane.smith@optimaint.com' },
 ];
 
 export const WORK_ORDERS: WorkOrder[] = [
@@ -99,9 +114,10 @@ export const WORK_ORDERS: WorkOrder[] = [
     assignedTo: 'Mike Ross',
     priority: 'High',
     status: 'In Progress',
-    dueDate: '2023-10-28',
-    createdAt: '2023-10-26',
-    type: 'Reactive'
+    dueDate: new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0],
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
+    type: 'Reactive',
+    partsUsed: 'Hydraulic Oil (5L) x1'
   },
   {
     id: 'WO-2346',
@@ -112,8 +128,8 @@ export const WORK_ORDERS: WorkOrder[] = [
     assignedTo: 'Sarah Connor',
     priority: 'Medium',
     status: 'Pending',
-    dueDate: '2023-11-01',
-    createdAt: '2023-10-27',
+    dueDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+    createdAt: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0],
     type: 'Preventive'
   },
   {
@@ -125,9 +141,10 @@ export const WORK_ORDERS: WorkOrder[] = [
     assignedTo: 'John Doe',
     priority: 'Critical',
     status: 'In Progress',
-    dueDate: '2023-10-27',
-    createdAt: '2023-10-27',
-    type: 'Reactive'
+    dueDate: new Date().toISOString().split('T')[0],
+    createdAt: new Date().toISOString().split('T')[0],
+    type: 'Reactive',
+    partsUsed: 'Fuse 10A x2'
   },
   {
     id: 'WO-2348',
@@ -137,9 +154,10 @@ export const WORK_ORDERS: WorkOrder[] = [
     assignedTo: 'Jane Smith',
     priority: 'Low',
     status: 'Completed',
-    dueDate: '2023-10-25',
-    createdAt: '2023-10-24',
-    type: 'Preventive'
+    dueDate: new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0],
+    createdAt: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+    type: 'Preventive',
+    partsUsed: 'Hydraulic Oil (5L) x1'
   },
   {
     id: 'WO-2350',
@@ -150,10 +168,36 @@ export const WORK_ORDERS: WorkOrder[] = [
     assignedTo: '',
     priority: 'Medium',
     status: 'Requested',
-    dueDate: '2023-11-01',
-    createdAt: '2023-10-28',
+    dueDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
+    createdAt: new Date().toISOString().split('T')[0],
     type: 'Reactive'
   },
+  // Previous months data for Chart Visualization
+  {
+    id: 'WO-2201',
+    title: 'Belt Replacement',
+    assetId: 'AST-003',
+    assetName: 'Conveyor Belt System',
+    assignedTo: 'Mike Ross',
+    priority: 'Medium',
+    status: 'Completed',
+    dueDate: '2023-09-15',
+    createdAt: '2023-09-10',
+    type: 'Reactive',
+    partsUsed: 'V-Belt A45 x1'
+  },
+   {
+    id: 'WO-2202',
+    title: 'Safety Guard Repair',
+    assetId: 'AST-002',
+    assetName: 'Hydraulic Press 50T',
+    assignedTo: 'John Doe',
+    priority: 'High',
+    status: 'Completed',
+    dueDate: '2023-08-20',
+    createdAt: '2023-08-18',
+    type: 'Reactive'
+  }
 ];
 
 export const PM_SCHEDULES: PMSchedule[] = [
@@ -163,8 +207,8 @@ export const PM_SCHEDULES: PMSchedule[] = [
     assetId: 'AST-003',
     assetName: 'Conveyor Belt System',
     frequencyDays: 7,
-    lastRunDate: '2023-10-20',
-    nextDueDate: '2023-10-27',
+    lastRunDate: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+    nextDueDate: new Date().toISOString().split('T')[0],
     assignedTo: 'John Doe'
   },
   {
@@ -173,30 +217,24 @@ export const PM_SCHEDULES: PMSchedule[] = [
     assetId: 'AST-002',
     assetName: 'Hydraulic Press 50T',
     frequencyDays: 30,
-    lastRunDate: '2023-09-25',
-    nextDueDate: '2023-10-25',
+    lastRunDate: new Date(Date.now() - 25 * 86400000).toISOString().split('T')[0],
+    nextDueDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
     assignedTo: 'Mike Ross'
   }
 ];
 
 export const RECENT_ACTIVITY: ActivityLog[] = [
-  { id: '1', action: 'Created WO-2349', user: 'Admin', timestamp: '10 mins ago', type: 'info' },
+  { id: '1', action: 'Created WO-2350', user: 'Admin', timestamp: '10 mins ago', type: 'info' },
   { id: '2', action: 'AST-002 Status changed to Downtime', user: 'System', timestamp: '45 mins ago', type: 'error' },
   { id: '3', action: 'Completed WO-2348', user: 'Jane Smith', timestamp: '2 hours ago', type: 'success' },
   { id: '4', action: 'Low Stock Alert: Hydraulic Oil', user: 'Inventory Bot', timestamp: '4 hours ago', type: 'warning' },
 ];
 
 export const PARTS: Part[] = [
-  { id: 'PRT-001', name: 'Hydraulic Oil (5L)', sku: 'OIL-HYD-05', quantity: 24, unitPrice: 45.00, category: 'Fluids' },
-  { id: 'PRT-002', name: 'Ball Bearing 50mm', sku: 'BRG-50-MM', quantity: 8, unitPrice: 12.50, category: 'Hardware' },
+  { id: 'PRT-001', name: 'Hydraulic Oil (5L)', sku: 'OIL-HYD-05', quantity: 8, unitPrice: 45.00, category: 'Fluids' }, // Low stock demo
+  { id: 'PRT-002', name: 'Ball Bearing 50mm', sku: 'BRG-50-MM', quantity: 24, unitPrice: 12.50, category: 'Hardware' },
   { id: 'PRT-003', name: 'V-Belt A45', sku: 'VBLT-A45', quantity: 15, unitPrice: 8.99, category: 'Belts' },
-  { id: 'PRT-004', name: 'Fuse 10A', sku: 'FUSE-10A', quantity: 4, unitPrice: 1.50, category: 'Electrical' },
+  { id: 'PRT-004', name: 'Fuse 10A', sku: 'FUSE-10A', quantity: 4, unitPrice: 1.50, category: 'Electrical' }, // Critical Low
   { id: 'PRT-005', name: 'Safety Sensor', sku: 'SENS-SAF-01', quantity: 12, unitPrice: 120.00, category: 'Sensors' },
-];
-
-export const TECHNICIANS: Technician[] = [
-  { id: 'T-001', name: 'Mike Ross', role: 'Senior Mechanic', status: 'Active', email: 'mike.ross@optimaint.com' },
-  { id: 'T-002', name: 'Sarah Connor', role: 'Electrical Specialist', status: 'Active', email: 'sarah.connor@optimaint.com' },
-  { id: 'T-003', name: 'John Doe', role: 'General Maintenance', status: 'Active', email: 'john.doe@optimaint.com' },
-  { id: 'T-004', name: 'Jane Smith', role: 'Apprentice', status: 'Inactive', email: 'jane.smith@optimaint.com' },
+  { id: 'PRT-006', name: 'M8 Bolts (Box)', sku: 'BLT-M8-100', quantity: 50, unitPrice: 5.00, category: 'Hardware' },
 ];

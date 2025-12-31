@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Activity, AlertTriangle, CheckCircle2, Clock, Users, DollarSign, Download } from 'lucide-react';
 import StatCard from '../components/StatCard';
@@ -10,12 +10,39 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { assets, workOrders, parts, activities } = useData();
+  const [now, setNow] = useState(new Date());
+
+  // Update "now" every minute to keep relative time fresh
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const lowStockCount = parts.filter(p => p.quantity < 10).length;
   const activeWOs = workOrders.filter(wo => wo.status === 'In Progress' || wo.status === 'Pending').length;
   
   // Calculate approximate costs (Inventory Value)
+  // This is calculated from real data in DataContext
   const totalInventoryValue = parts.reduce((acc, part) => acc + (part.unitPrice * part.quantity), 0);
+
+  // --- Helper: Format Time Ago ---
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    // Check if it's a valid date (handles the ISO strings we just added)
+    if (isNaN(date.getTime())) {
+      // If not a date (e.g. "10 mins ago" from legacy dummy data), return as is
+      return dateString;
+    }
+
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
 
   // --- Real-time Chart Logic ---
   const chartData = useMemo(() => {
@@ -38,16 +65,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     // 3. Populate with real WO data
     workOrders.forEach(wo => {
       const woDate = new Date(wo.createdAt);
-      // Logic check: Is this WO within the last 6 months?
-      // For simplicity in this demo, we assume the month string match is enough for visual
-      // In production, compare actual timestamps.
       const woMonthStr = woDate.toLocaleString('default', { month: 'short' });
       
       const dataPoint = data.find(d => d.month === woMonthStr);
       if (dataPoint) {
         if (wo.status === 'Completed') {
           dataPoint.completed += 1;
-          // Simulated Cost: $150 labor + arbitrary part cost
+          // Simulated Cost: $150 labor + arbitrary part cost logic for chart visual
           dataPoint.costs += 150; 
         } else {
           dataPoint.backlog += 1;
@@ -140,7 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           title="Inventory Value" 
           value={`$${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`} 
           icon={DollarSign} 
-          trend="Estimated" 
+          trend="Calculated" 
           trendUp={true} 
           color="green"
         />
@@ -204,14 +228,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Recent Activity */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Recent Activity</h3>
+          <div className="flex justify-between items-center mb-6">
+             <h3 className="text-lg font-bold text-slate-800">Recent Activity</h3>
+             <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">Live Feed</span>
+          </div>
+          
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar max-h-[320px]">
             <div className="space-y-6">
               {activities.length === 0 ? (
                  <p className="text-slate-400 text-sm text-center italic mt-10">No recent activity logged.</p>
               ) : (
                 activities.map((log) => (
-                  <div key={log.id} className="flex gap-4">
+                  <div key={log.id} className="flex gap-4 animate-in slide-in-from-right-4 duration-300">
                     <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                       log.type === 'success' ? 'bg-green-100 text-green-600' :
                       log.type === 'warning' ? 'bg-orange-100 text-orange-600' :
@@ -228,7 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs text-slate-500">{log.user}</span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className="text-xs text-slate-500">{log.timestamp}</span>
+                        <span className="text-xs text-slate-500">{formatTimeAgo(log.timestamp)}</span>
                       </div>
                     </div>
                   </div>

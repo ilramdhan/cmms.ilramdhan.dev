@@ -1,19 +1,30 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, AlertCircle, CheckCircle, Plus, Trash2, Edit, AlertOctagon, Wrench, ChevronDown, PauseCircle } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, CheckCircle, Plus, Trash2, Edit, AlertOctagon, Wrench, ChevronDown, PauseCircle, Package, X } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { WorkOrderStatus, WorkOrderPriority, WorkOrder } from '../types';
 import Modal from '../components/Modal';
 
 const WorkOrders: React.FC = () => {
-  const { workOrders, assets, technicians, addWorkOrder, updateWorkOrder, deleteWorkOrder } = useData();
+  const { workOrders, assets, technicians, parts, addWorkOrder, updateWorkOrder, deleteWorkOrder, addNotification } = useData();
   const [activeTab, setActiveTab] = useState<WorkOrderStatus | 'All'>('All');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWO, setEditingWO] = useState<WorkOrder | null>(null);
+  
+  // Form State
   const [formData, setFormData] = useState<Partial<WorkOrder>>({
     title: '', description: '', priority: 'Medium', status: 'Pending', assignedTo: '', assetId: '', dueDate: '', partsUsed: ''
   });
+
+  // Local state for the "Parts Selector" in the modal
+  const [selectedPartId, setSelectedPartId] = useState('');
+  const [selectedPartQty, setSelectedPartQty] = useState(1);
+  // We keep a temporary list of parts in the modal before saving to the string format
+  const [tempPartsList, setTempPartsList] = useState<string[]>([]);
+
+  // Helper to get currently selected part object
+  const selectedPart = parts.find(p => p.id === selectedPartId);
 
   const tabs = ['All', 'Requested', 'Pending', 'In Progress', 'Completed'];
 
@@ -41,7 +52,6 @@ const WorkOrders: React.FC = () => {
     }
   };
 
-  // New helper for Dropdown styling
   const getStatusStyles = (status: WorkOrderStatus) => {
     switch (status) {
       case 'Completed': return 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100';
@@ -57,13 +67,45 @@ const WorkOrders: React.FC = () => {
     if (wo) {
       setEditingWO(wo);
       setFormData(wo);
+      // Initialize temp parts list from the string
+      setTempPartsList(wo.partsUsed ? wo.partsUsed.split(', ').filter(s => s) : []);
     } else {
       setEditingWO(null);
       setFormData({
         title: '', description: '', priority: 'Medium', status: 'Pending', assignedTo: '', assetId: '', dueDate: new Date().toISOString().split('T')[0], partsUsed: ''
       });
+      setTempPartsList([]);
     }
+    setSelectedPartId('');
+    setSelectedPartQty(1);
     setIsModalOpen(true);
+  };
+
+  const handleAddPart = () => {
+    if (!selectedPartId) return;
+    const part = parts.find(p => p.id === selectedPartId);
+    
+    if (part) {
+        // Validation: Check stock
+        if (selectedPartQty > part.quantity) {
+            alert(`Error: Cannot add ${selectedPartQty} units. Only ${part.quantity} available in stock.`);
+            return;
+        }
+
+        // Create a string that DataContext can parse later: "PartName xQty"
+        const partString = `${part.name} x${selectedPartQty}`;
+        setTempPartsList([...tempPartsList, partString]);
+        
+        // Reset selection
+        setSelectedPartId('');
+        setSelectedPartQty(1);
+    }
+  };
+
+  const handleRemovePart = (index: number) => {
+    const newList = [...tempPartsList];
+    newList.splice(index, 1);
+    setTempPartsList(newList);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -71,19 +113,21 @@ const WorkOrders: React.FC = () => {
     const asset = assets.find(a => a.id === formData.assetId);
     const assetName = asset ? asset.name : 'Unknown Asset';
     
+    // Combine parts array back to string for storage
+    const finalPartsString = tempPartsList.join(', ');
+
     if (editingWO) {
-      updateWorkOrder(editingWO.id, { ...formData, assetName });
+      updateWorkOrder(editingWO.id, { ...formData, assetName, partsUsed: finalPartsString });
     } else {
       addWorkOrder({
         ...formData as any,
         assetName,
+        partsUsed: finalPartsString,
         createdAt: new Date().toISOString().split('T')[0]
       });
     }
     setIsModalOpen(false);
   };
-
-  // Removed cycleStatus function in favor of direct dropdown change
 
   return (
     <div className="space-y-6">
@@ -146,6 +190,12 @@ const WorkOrders: React.FC = () => {
                     <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                     <span>Assigned to <span className="font-medium text-slate-700">{wo.assignedTo || 'Unassigned'}</span></span>
                   </div>
+                  {wo.partsUsed && (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit">
+                          <Package size={12} />
+                          <span>Parts: {wo.partsUsed}</span>
+                      </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4 sm:gap-6 text-sm">
@@ -269,19 +319,64 @@ const WorkOrders: React.FC = () => {
           </div>
 
           <div className="pt-2 border-t border-slate-100">
-            <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Parts Used (Demo)</h4>
-            <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="e.g. V-Belt A45"
-                  className="flex-1 px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:outline-none"
-                  value={formData.partsUsed || ''}
-                  onChange={(e) => setFormData({...formData, partsUsed: e.target.value})}
-                />
+            <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                 <Package size={14} /> Parts Required / Used
+            </h4>
+            
+            {/* Parts Selector with Explicit Text Color Fix */}
+            <div className="flex gap-2 mb-3">
+               <select 
+                 className="flex-1 px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 value={selectedPartId}
+                 onChange={(e) => {
+                     setSelectedPartId(e.target.value);
+                     setSelectedPartQty(1); // Reset qty when part changes
+                 }}
+               >
+                 <option value="" className="text-slate-500">Select Part...</option>
+                 {parts.map(p => (
+                   <option key={p.id} value={p.id} className="text-slate-900">
+                     {p.name} (Stock: {p.quantity})
+                   </option>
+                 ))}
+               </select>
+               <input 
+                 type="number" 
+                 min="1"
+                 max={selectedPart ? selectedPart.quantity : 100} // Dynamic MAX
+                 className="w-20 px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 value={selectedPartQty}
+                 onChange={(e) => setSelectedPartQty(parseInt(e.target.value))}
+               />
+               <button 
+                 type="button" 
+                 onClick={handleAddPart}
+                 className="px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm font-medium"
+               >
+                 Add
+               </button>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-               Integration Demo: If you type "V-Belt" and complete this WO, stock will decrease by 1.
-            </p>
+            {selectedPart && (
+                <p className="text-xs text-slate-500 mb-2">
+                    Max available: <span className="font-semibold">{selectedPart.quantity}</span>
+                </p>
+            )}
+
+            {/* Selected Parts List */}
+            {tempPartsList.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                    {tempPartsList.map((item, index) => (
+                        <div key={index} className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100">
+                            <span>{item}</span>
+                            <button type="button" onClick={() => handleRemovePart(index)} className="hover:text-blue-900">
+                                <X size={12} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-xs text-slate-400 italic">No parts added yet.</p>
+            )}
           </div>
 
           <div className="pt-4 flex justify-end gap-3">

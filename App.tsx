@@ -18,7 +18,7 @@ const AppContent: React.FC = () => {
   const [isGuestMode, setIsGuestMode] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   
-  const { notifications, activities } = useData();
+  const { notifications, activities, addNotification } = useData();
   const notifRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -31,6 +31,15 @@ const AppContent: React.FC = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Check for Reset Success Flag
+  useEffect(() => {
+    const wasReset = localStorage.getItem('cmms_reset_success');
+    if (wasReset === 'true') {
+      addNotification('System reset to demo data successfully.', 'success');
+      localStorage.removeItem('cmms_reset_success');
+    }
+  }, [addNotification]);
 
   if (isGuestMode) {
     return <RequestPortal onExit={() => setIsGuestMode(false)} />;
